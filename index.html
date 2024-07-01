@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Assistant</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f7f3e9; /* Cream background */
+            background-image: url('bg1.jpg'); /* Background image */
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.3); /* Semi-transparent background */
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 600px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            position: absolute; /* Absolute-positioned heading */
+            top: 20px;
+            left: 40px;
+            color: white;
+            font-size: 2em;
+        }
+        .custom-input {
+            width: calc(100% - 10px);
+            padding: 15px 20px;
+            border-radius: 20px;
+            border: none;
+            background-color: white; /* Transparent background */
+            font-size: 16px;
+            resize: none;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            /* Additional styling for improved appearance */
+            box-sizing: border-box; /* Ensure padding doesn't affect width */
+        }
+        .custom-input:focus {
+            border-color: #007BFF;
+            box-shadow: none;
+        }
+        .custom-placeholder::placeholder {
+            color: #aaa;
+        }
+        .button1 {
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: none;
+            background-color: #000000;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Positioning for overlapping the input box */
+            position: absolute;
+            top: 19%;
+            transform: translateY(-50%); /* Center vertically within input box */
+            right: 45px; /* Position 10px from the right edge of the input box */
+        }
+        .button2 {
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: none;
+            background-color: transparent;
+            color: #000000;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Positioning for overlapping the input box */
+            position: absolute;
+            top: 19%;
+            transform: translateY(-50%); /* Center vertically within input box */
+            right: 110px; /* Position 10px from the right edge of the input box */
+        }
+        .button1:hover {
+            background-color: #353a3e;
+        }
+        
+        #output {
+            width: 100%;
+            height: 200px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            background-color: transparent; /* Transparent background */
+            overflow-y: auto;
+            font-size: 16px;
+            white-space: pre-wrap;
+            text-align: left;
+            border: none;
+        }
+        p {
+            margin: 0 0 10px 0;
+        }
+        p.user {
+            font-weight: bold;
+            color: #ffffff;
+        }
+        p.mistral {
+            color: #ffffff;
+        }
+        .icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            fill: #fff;
+        }
+    </style>
+    <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css">
+</head>
+<body>
+    <h1>Ziyan AI</h1>
+    <div class="container">
+        <textarea id="input" class="form-control custom-input custom-placeholder" rows="1" cols="50" placeholder="Type your message here..."></textarea><br>
+        <button onclick="sendText()" class="button1">
+            <i class="uil uil-arrow-right"></i>
+        </button>
+        <button onclick="sendVoice()" class="button2">
+            <i class="uil uil-microphone"></i>
+        </button>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        async function sendText() {
+            const input = document.getElementById('input').value;
+            if (input.trim() === '') return;
+            displayUserPrompt(input);
+            const response = await fetch('http://127.0.0.1:5000/text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: input }),
+            });
+            const data = await response.json();
+            displayResponse(data.response);
+            await sendTTS(data.response);
+        }
+
+        async function sendVoice() {
+            const inputField = document.getElementById('input');
+            
+            inputField.placeholder = 'Listening...';
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/voice');
+                const data = await response.json();
+                const userPrompt = data.user_message;  // assuming backend returns user's voice input
+                inputField.placeholder = 'Type your message here...';
+                displayUserPrompt(userPrompt);
+                displayResponse(data.response);
+                await sendTTS(data.response);
+            } catch (error) {
+                inputField.placeholder = 'Type your message here...';
+                console.error('Error:', error);
+            }
+        }
+
+        async function sendTTS(message) {
+            await fetch('http://127.0.0.1:5000/tts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message }),
+            });
+        }
+
+        function displayUserPrompt(prompt) {
+            const output = document.getElementById('output');
+            const userPara = document.createElement('p');
+            userPara.classList.add('user');
+            userPara.textContent = `User: ${prompt}`;
+            output.appendChild(userPara);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function displayResponse(response) {
+            const output = document.getElementById('output');
+            const para = document.createElement('p');
+            para.classList.add('mistral');
+            para.textContent = `Ziyan: ${response}`;
+            output.appendChild(para);
+            output.scrollTop = output.scrollHeight;
+        }
+    </script>
+</body>
+</html>
